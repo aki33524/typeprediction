@@ -44,14 +44,22 @@ with open(sys.argv[2]) as f:
 		m = int(f.readline())
 		for i in range(m):
 			rev, p, to = map(int, f.readline().split())
-			# if classes[to] < 0:
-			# 	continue
-			# node = (rev, p, classes[to])
-			node = (rev, p)
-			if node not in d:
-				d[node] = 0
-			d[node] += 1
+			node = (rev, p, classes[to])
+			
+			if node[2] < 0:
+				# 等確率で分布するとする
+				node = list(node)
+				for i in range(len(classes)):
+					node[2] = i
+					if tuple(node) not in d:
+						d[tuple(node)] = 0
+					d[tuple(node)] = 1/float(len(classes))
+			else:
+				if node not in d:
+					d[node] = 0
+				d[node] += 1
 		for node in d:
+			# これ含めてよいのか微妙
 			if node not in idfs:
 				idfs[node] = 0
 			idfs[node] += 1
