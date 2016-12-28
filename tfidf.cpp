@@ -1,5 +1,5 @@
 /*
-cat data/original_class.txt data/graph.txt data/classes.txt | ./tfidf 
+cat data/original_class.txt data/graph.txt data/classes.txt data/entities.txt | ./tfidf 
 */
 #include <bits/stdc++.h>
 using namespace std;
@@ -10,7 +10,8 @@ int N;
 vector<vector<int>> classes;
 map<int, double> idfs; //node, freq
 vector<map<int, double>> tfs; //doc, node, freq
-vector<string> class_name;
+vector<string> class_name, resource_name;
+vector<int> class_count(CLASS_NUM);
 
 int node_to_hash(int rev, int p){
 	const int R = 2;
@@ -22,8 +23,10 @@ void load_original_class(){
 	for(int i=0; i<N; i++){
 		int c; cin >> c;
 		classes[i].resize(c);
-		for(int j=0; j<c; j++)
+		for(int j=0; j<c; j++){
 			cin >> classes[i][j];
+			class_count[classes[i][j]]++;
+		}
 	}
 }
 void load_graph(){
@@ -53,10 +56,17 @@ void load_class_name(){
 	for(auto &v: class_name)
 		cin >> v;
 }
+void load_resource_name(){
+	cin >> N;
+	resource_name.resize(N);
+	for(auto &v: resource_name)
+		cin >> v;
+}
 void input(){
 	load_original_class();
 	load_graph();
 	load_class_name();
+	load_resource_name();
 }
 double cos_similarity(map<int, double> &vec1, map<int, double> &vec2){
 	double s = 0;
@@ -84,36 +94,55 @@ int main(){
 	// 339140 日本
 	// 70522 アメリカ合衆国
 	// 174186 バラク・オバマ
-	int idx1 = 339140;
+	int idx1 = 0;
 	
-	vector<double> r(CLASS_NUM);
-	map<int, double> vec1;
-	for(auto p: tfs[idx1]){
-		vec1[p.first] = p.second * idfs[p.first];
-		// cout << vec1[p.first] << endl;
-	}
-	for(int idx2=0; idx2<N; idx2++){
-		map<int, double> vec2;
-		for(auto p: tfs[idx2])
-			vec2[p.first] = p.second * idfs[p.first];
-		// FIXME
-		if(vec2.size() == 0)
+	while(true){
+		cerr << ">>> "; cin >> idx1;
+		if(idx1 >= N){
+			cerr << "out of range" << endl;
 			continue;
-		double x = cos_similarity(vec1, vec2);
-		for(auto v: classes[idx2])
-			r[v] += x;
+		}
+
+		vector<double> r(CLASS_NUM);
+		map<int, double> vec1;
+		for(auto p: tfs[idx1]){
+			vec1[p.first] = p.second * idfs[p.first];
+			// cout << vec1[p.first] << endl;
+		}
+		for(int idx2=0; idx2<N; idx2++){
+			// if(idx1 == idx2) continue;
+
+			map<int, double> vec2;
+			for(auto p: tfs[idx2])
+				vec2[p.first] = p.second * idfs[p.first];
+			// FIXME
+			if(vec2.size() == 0)
+				continue;
+			double x = cos_similarity(vec1, vec2);
+			for(auto v: classes[idx2])
+				r[v] += x;
+		}
+		vector<pair<double, int>> l;
+		for(int i=0; i<CLASS_NUM; i++){
+			if(class_count[i] == 0) continue;
+			l.push_back({r[i]/class_count[i], i});
+		}
+		sort(l.rbegin(), l.rend());
+
+		cout << "----------" << endl;
+		for(int i=0; i<l.size(); i++){
+			if(l[0].first != l[i].first){
+				for(int j=0; j<i; j++){
+					auto p = l[j];
+					cout << p.first << "\t" <<  class_name[p.second] << endl;
+				}
+				break;
+			}
+		}
+		cout << "----------" << endl;
+		for(auto v: classes[idx1])
+			cout << class_name[v] << endl;
+		cout << resource_name[idx1] << endl;
 	}
-	vector<pair<double, int>> l;
-	for(int i=0; i<CLASS_NUM; i++)
-		l.push_back({r[i], i});
-	sort(l.rbegin(), l.rend());
-
-	cout << "----------" << endl;
-	for(auto p: l)
-		cout << p.first << "\t" <<  class_name[p.second] << endl;
-	cout << "----------" << endl;
-	for(auto v: classes[idx1])
-		cout << v << endl;
-
 	return 0;
 }
